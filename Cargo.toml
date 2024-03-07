@@ -1,0 +1,21 @@
+[package]
+name = "coffee_labeler"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = "0.7.4"
+base64 = "0.22.0"
+celes = "2.4.0"
+chromiumoxide = {version = "0.5.7", features = ["tokio-runtime"], default-features = false}
+color-eyre = "0.6.2"
+futures = "0.3.30"
+maud = { version = "0.26.0", features = ["axum"] }
+protobuf = { version = "3.4.0", features = ["with-bytes"] }
+reqwest = { version = "0.11.24", features = ["rustls", "rustls-tls"] }
+serde = { version = "1.0.197", features = ["derive"] }
+serde_json = "1.0.114"
+tokio = { version = "1.36.0", features = ["full"] }
+
+[build-dependencies]
+protobuf-codegen = "3.4.0"
