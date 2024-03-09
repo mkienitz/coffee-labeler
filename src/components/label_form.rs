@@ -25,6 +25,7 @@ pub fn label_form(bean_info: &BeanInfo) -> Markup {
               hx-post="/api/load_from_bq"
               hx-target="#label"
               hx-include="[name='dose_weight']"
+              _="on htmx:afterOnLoad remove @disabled from #print_button then add @disabled to #validate_button"
               .flex .flex-row .space-x-4 .items-end .border .border-gray-600 .p-3 .w-full .justify-center
             {
                 div .flex .flex-col .grow {
@@ -34,7 +35,9 @@ pub fn label_form(bean_info: &BeanInfo) -> Markup {
                       .bg-gray-700
                     ;
                 }
-                button type="submit" .w-fit .h-fit .bg-gray-600 .border boder-gray-300 .p-1 { "Load" }
+                button type="submit"
+                  .w-fit .h-fit .bg-gray-600 .border boder-gray-300 .p-1
+                { "Load" }
             }
             div .flex .flex-row .space-x-4 .items-end .border .border-gray-600 .p-3 .w-full {
                 div .flex .flex-col {
@@ -47,10 +50,13 @@ pub fn label_form(bean_info: &BeanInfo) -> Markup {
                         ;"(g)"
                     }
                 }
-                button
+                button disabled
+                  #validate_button
                   hx-post="/api/update_label"
                   hx-ext="json-enc" hx-target="#label" hx-vals={"js:"(label_htmx_vals)}
-                  .w-fit .h-fit .text-md .border .bg-gray-600 .border-gray-300 .p-1
+                  .w-fit .h-fit .text-md .border .bg-gray-600 .border-gray-300 .p-1 ."disabled:bg-transparent"
+                  _="on input from #label remove @disabled
+                     on htmx:afterOnLoad remove @disabled from #print_button then add @disabled"
                 {
                     "Validate"
                 }
@@ -63,10 +69,13 @@ pub fn label_form(bean_info: &BeanInfo) -> Markup {
                         ;
                     }
                     button
+                      #print_button
                       hx-post="/api/print_label" hx-ext="json-enc" hx-target="#label"
                       hx-vals={"js:{bean_info:"(label_htmx_vals)", no_pages: Number(htmx.find('#no_pages').value)}"}
                       hx-confirm="Do you really want to print?"
-                      .w-fit .h-fit .text-md .border .bg-gray-600 .border-gray-300 .p-1
+                      .w-fit .h-fit .text-md .border .bg-gray-600 .border-gray-300 .p-1 ."disabled:bg-transparent"
+
+                      _="on input from #label add @disabled"
                     {"Print"}
                 }
             }
