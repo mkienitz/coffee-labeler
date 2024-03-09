@@ -129,7 +129,24 @@
             help = "Find unused expressions in nix code";
           }
         ];
-
+        env = [
+          {
+            name = "COFFEE_LABELER_HOST";
+            value = "localhost";
+          }
+          {
+            name = "COFFEE_LABELER_PORT";
+            value = 3333;
+          }
+          {
+            name = "COFFEE_LABELER_PRINTER_HOST";
+            value = "192.168.178.36";
+          }
+          {
+            name = "COFFEE_LABELER_PRINTER_PORT";
+            value = 9100;
+          }
+        ];
         devshell.startup.pre-commit.text = self.checks.${localSystem}.pre-commit.shellHook;
         packages =
           commonArgs.buildInputs

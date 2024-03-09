@@ -18,7 +18,7 @@ pub fn label(bean_info: &BeanInfo) -> Markup {
           .text-black .bg-white .border .border-black
         {
             div .flex .flex-row .max-w-full .border-b-4 .border-black {
-                div .leading-none .flex .items-center .justify-between .bg-red-600 .text-white .font-bold ."text-[50px]" .border-r .border-black {
+                div .leading-none .flex .items-center .justify-between .bg-red-600 .text-white .font-bold ."text-[56px]" .border-r .border-black {
                     (editable_div(&bean_info.country, "country"))
                 }
                 div .flex .grow .max-w-full .items-center .justify-between .border-r .border-black {

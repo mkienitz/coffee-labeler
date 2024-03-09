@@ -7,10 +7,8 @@ use crate::error::AppError;
 
 pub async fn render_markup(markup: Markup) -> Result<Vec<u8>, AppError> {
     let builder = BrowserConfig::builder();
-    let (mut browser, mut handler) = Browser::launch(builder.build().map_err(|e| eyre!(e))?)
-        .await
-        .map_err(|e| eyre!(e))?;
-
+    let (mut browser, mut handler) =
+        Browser::launch(builder.build().map_err(|e| eyre!(e))?).await?;
     let handle = tokio::task::spawn(async move {
         while let Some(h) = handler.next().await {
             if h.is_err() {
@@ -18,22 +16,14 @@ pub async fn render_markup(markup: Markup) -> Result<Vec<u8>, AppError> {
             }
         }
     });
-
-    let page = browser
-        .new_page("about:blank")
-        .await
-        .map_err(|e| eyre!(e))?;
-
-    page.set_content(markup.into_string())
-        .await
-        .map_err(|e| eyre!(e))?;
-
-    let el = page.find_element("#target").await.map_err(|e| eyre!(e))?;
-    let screenshot = el
+    let page = browser.new_page("about:blank").await?;
+    page.set_content(markup.into_string()).await?;
+    let screenshot = page
+        .find_element("#label")
+        .await?
         .screenshot(CaptureScreenshotFormat::Png)
-        .await
-        .map_err(|e| eyre!(e))?;
-    browser.close().await.map_err(|e| eyre!(e))?;
-    handle.await.map_err(|e| eyre!(e))?;
+        .await?;
+    browser.close().await?;
+    handle.await?;
     Ok(screenshot)
 }

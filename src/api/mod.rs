@@ -1,11 +1,14 @@
+use std::io::Cursor;
 use std::str::FromStr;
 
-use axum::{http::header, response::IntoResponse, Form, Json};
+use axum::{extract::State, http::header, response::IntoResponse, Form, Json};
 use base64::{prelude::BASE64_STANDARD, Engine};
+
 use protobuf::Message;
 use serde::Deserialize;
+use tokio::{io::AsyncWriteExt, net::TcpStream};
 
-use crate::{components, error::AppError, protos::bean, types::BeanInfo};
+use crate::{components, config::AppState, error::AppError, protos::bean, types::BeanInfo};
 use color_eyre::eyre::{eyre, OptionExt, Result};
 
 use maud::Markup;
@@ -23,8 +26,36 @@ pub async fn create_label_image(
         .into_response())
 }
 
-pub async fn submit_label_form(Form(bean_info): Form<BeanInfo>) -> Result<Markup, AppError> {
+pub async fn update_label(Json(bean_info): Json<BeanInfo>) -> Result<Markup, AppError> {
     Ok(components::label(&bean_info))
+}
+
+#[derive(Deserialize)]
+pub struct PrintInfo {
+    bean_info: BeanInfo,
+    no_pages: u8,
+}
+
+pub async fn print_label(
+    State(state): State<AppState>,
+    Json(print_info): Json<PrintInfo>,
+) -> Result<Markup, AppError> {
+    let screenshot = render_markup(components::label(&print_info.bean_info)).await?;
+    let reader = image::io::Reader::new(Cursor::new(screenshot)).with_guessed_format()?;
+    let print_job = brother_ql::printjob::PrintJob {
+        no_pages: print_info.no_pages,
+        image: reader.decode()?,
+        media: brother_ql::media::Media::C62,
+        high_dpi: false,
+        compressed: false,
+        quality_priority: true,
+        cut_behaviour: brother_ql::printjob::CutBehavior::CutEach,
+    }
+    .compile()?;
+    println!("Sending print job!");
+    let mut stream = TcpStream::connect(state.printer_address.clone()).await?;
+    let _bytes_written = stream.write(&print_job).await?;
+    Ok(components::label(&print_info.bean_info))
 }
 
 #[derive(Deserialize)]
@@ -33,53 +64,57 @@ pub struct BqForm {
     dose_weight: f32,
 }
 
-pub async fn submit_bq_url(Form(form_data): Form<BqForm>) -> Result<Markup, AppError> {
-    let url = form_data.url;
-    let stripped: String = url
-        .strip_prefix("https://beanconqueror.com?")
-        .ok_or_eyre("Malformed URL")?
-        .split('&')
-        .filter_map(|p| p.split_once('='))
-        .map(|a| a.1)
-        .collect();
-    let bytes = BASE64_STANDARD.decode(stripped)?;
-    let bean = bean::BeanProto::parse_from_bytes(&bytes)?;
-    let info = bean
+pub async fn load_from_bq(Form(form_data): Form<BqForm>) -> Result<Markup, AppError> {
+    let proto_string = url::Url::parse(&form_data.url)?
+        .query_pairs()
+        .map(|v| v.1)
+        .collect::<String>()
+        .replace(' ', "+");
+    let bean_proto = BASE64_STANDARD
+        .decode(proto_string)
+        .map(|s| bean::BeanProto::parse_from_bytes(&s))??;
+    let bean_proto_info = bean_proto
         .bean_information
         .first()
         .ok_or_eyre("No bean information found!")?;
-
-    let country_alpha2 = info
+    let country_alpha2 = bean_proto_info
         .country
-        .clone()
+        .as_ref()
         .ok_or("Couldn't find country!")
-        .and_then(|c| celes::Country::from_str(&c))
+        .and_then(|c| celes::Country::from_str(c))
         .map_err(|e| eyre!(e))?
         .alpha2
         .to_owned();
-
     let bean_info = BeanInfo {
         country: country_alpha2,
-        name: bean.name,
-        roaster: bean.roaster.ok_or_eyre("Couldn't find roaster!")?,
-        varietals: info.variety.clone().ok_or_eyre("Couldn't find roaster!")?,
-        region: info.region.as_ref().unwrap_or(&"-".to_owned()).to_owned(),
-        farm: info.farm.clone().ok_or_eyre("Couldn't find farm!")?,
-        elevation: info
+        name: bean_proto.name,
+        roaster: bean_proto.roaster.ok_or_eyre("Couldn't find roaster!")?,
+        varietals: bean_proto_info
+            .variety
+            .clone()
+            .ok_or_eyre("Couldn't find varietals!")?,
+        region: bean_proto_info.region.as_deref().unwrap_or("-").to_owned(),
+        farm: bean_proto_info
+            .farm
+            .clone()
+            .ok_or_eyre("Couldn't find farm!")?,
+        elevation: bean_proto_info
             .elevation
-            .as_ref()
-            .unwrap_or(&"-".to_owned())
+            .as_deref()
+            .unwrap_or("-")
             .to_owned(),
-        dose_weight: format!("{}g", form_data.dose_weight.to_string()),
-        roasting_date: bean
+        dose_weight: format!("{}g", form_data.dose_weight),
+        roasting_date: bean_proto
             .roastingDate
             .ok_or_eyre("Couldn't find roasting date!")?[2..10]
             .into(),
-        processing: info
+        processing: bean_proto_info
             .processing
             .clone()
             .ok_or_eyre("Couldn't find processing!")?,
-        aromatics: bean.aromatics.ok_or_eyre("Couldn't find Aromatics!")?,
+        aromatics: bean_proto
+            .aromatics
+            .ok_or_eyre("Couldn't find aromatics!")?,
     };
     Ok(components::label(&bean_info))
 }
