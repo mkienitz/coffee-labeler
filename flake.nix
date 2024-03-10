@@ -35,8 +35,15 @@
     nixpkgs,
     pre-commit-hooks,
     rust-overlay,
-  }:
-    flake-utils.lib.eachDefaultSystem (localSystem: let
+  } @ inputs:
+    {
+      nixosModules.coffee-labeler = import ./nix/module.nix inputs;
+      nixosModules.default = self.nixosModules.coffee-labeler;
+      overlays.default = _final: prev: {
+        inherit (self.packages.${prev.stdenv.hostPlatform.system}) coffee-labeler;
+      };
+    }
+    // flake-utils.lib.eachDefaultSystem (localSystem: let
       pkgs = import nixpkgs {
         inherit localSystem;
         overlays = [
@@ -50,18 +57,17 @@
       craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
 
       commonArgs = {
-        src = craneLib.cleanCargoSource (craneLib.path ./.);
-        buildInputs =
-          [
-            # nothing yet
-          ]
-          ++ lib.optionals pkgs.stdenv.isDarwin [
-            # Additional darwin specific inputs can be set here
-            pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
-            pkgs.darwin.apple_sdk.frameworks.CoreFoundation
-            pkgs.darwin.apple_sdk.frameworks.Security
-            pkgs.libiconv
-          ];
+        src = lib.cleanSourceWith {
+          src = ./.;
+          filter = path: type: (craneLib.filterCargoSources path type) || (lib.hasSuffix ".proto" (builtins.baseNameOf path));
+        };
+        buildInputs = lib.optionals pkgs.stdenv.isDarwin [
+          # Additional darwin specific inputs can be set here
+          pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
+          pkgs.darwin.apple_sdk.frameworks.CoreFoundation
+          pkgs.darwin.apple_sdk.frameworks.Security
+          pkgs.libiconv
+        ];
       };
 
       # Build *just* the cargo dependencies, so we can reuse
@@ -76,20 +82,20 @@
     in {
       checks =
         {
-          satiri = package;
+          coffee-labeler = package;
 
-          satiri-clippy = craneLib.cargoClippy (commonArgs
+          coffee-labeler-clippy = craneLib.cargoClippy (commonArgs
             // {
               inherit cargoArtifacts;
               cargoClippyExtraArgs = "--all-targets -- --deny warnings";
             });
 
-          satiri-doc = craneLib.cargoDoc (commonArgs
+          coffee-labeler-doc = craneLib.cargoDoc (commonArgs
             // {
               inherit cargoArtifacts;
             });
 
-          satiri-fmt = craneLib.cargoFmt {
+          coffee-labeler-fmt = craneLib.cargoFmt {
             inherit (commonArgs) src;
           };
         }
@@ -100,16 +106,16 @@
               alejandra.enable = true;
               cargo-check.enable = true;
               rustfmt.enable = true;
-              # statix.enable = true;
+              statix.enable = true;
             };
           };
         };
 
       packages.default = package;
-      packages.satiri = package;
+      packages.coffee-labeler = package;
 
       devShells.default = pkgs.devshell.mkShell {
-        name = "satiri";
+        name = "coffee-labeler";
         imports = [
           "${devshell}/extra/language/rust.nix"
         ];
@@ -131,7 +137,7 @@
         ];
         env = [
           {
-            name = "COFFEE_LABELER_HOST";
+            name = "COFFEE_LABELER_ADDRESS";
             value = "localhost";
           }
           {
@@ -139,7 +145,7 @@
             value = 3333;
           }
           {
-            name = "COFFEE_LABELER_PRINTER_HOST";
+            name = "COFFEE_LABELER_PRINTER_ADDRESS";
             value = "192.168.178.36";
           }
           {

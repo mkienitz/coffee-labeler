@@ -1,5 +1,5 @@
 [package]
-name = "coffee_labeler"
+name = "coffee-labeler"
 version = "0.1.0"
 edition = "2021"
 
@@ -14,7 +14,6 @@ futures = "0.3.30"
 image = "0.24.9"
 maud = { version = "0.26.0", features = ["axum"] }
 protobuf = { version = "3.4.0", features = ["with-bytes"] }
-reqwest = { version = "0.11.24", features = ["rustls", "rustls-tls"] }
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.114"
 tokio = { version = "1.36.0", features = ["full"] }

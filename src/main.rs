@@ -16,13 +16,13 @@ async fn index() -> Markup {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let addr = env::var("COFFEE_LABELER_ADDRESS")?;
     let port = env::var("COFFEE_LABELER_PORT")?;
-    let host = env::var("COFFEE_LABELER_HOST")?;
-    let printer_host = env::var("COFFEE_LABELER_PRINTER_HOST")?;
+    let printer_addr = env::var("COFFEE_LABELER_PRINTER_ADDRESS")?;
     let printer_port = env::var("COFFEE_LABELER_PRINTER_PORT")?;
 
     let state = AppState {
-        printer_address: format!("{printer_host}:{printer_port}"),
+        printer_address: format!("{printer_addr}:{printer_port}"),
     };
 
     color_eyre::install()?;
@@ -33,7 +33,7 @@ async fn main() -> Result<()> {
         .route("/api/print_label", post(api::print_label))
         .route("/api/load_from_bq", post(api::load_from_bq))
         .with_state(state);
-    let listener = tokio::net::TcpListener::bind(format!("{host}:{port}")).await?;
+    let listener = tokio::net::TcpListener::bind(format!("{addr}:{port}")).await?;
     axum::serve(listener, app).await?;
 
     Ok(())
