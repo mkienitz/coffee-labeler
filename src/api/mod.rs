@@ -52,7 +52,6 @@ pub async fn print_label(
         cut_behaviour: brother_ql::printjob::CutBehavior::CutEach,
     }
     .compile()?;
-    println!("Sending print job!");
     let mut stream = TcpStream::connect(state.printer_address.clone()).await?;
     let _bytes_written = stream.write(&print_job).await?;
     Ok(components::label(&print_info.bean_info))
@@ -81,7 +80,7 @@ pub async fn load_from_bq(Form(form_data): Form<BqForm>) -> Result<Markup, AppEr
         .country
         .as_ref()
         .ok_or("Couldn't find country!")
-        .and_then(|c| celes::Country::from_str(c))
+        .and_then(|c| celes::Country::from_str(&c.replace(' ', "_")))
         .map_err(|e| eyre!(e))?
         .alpha2
         .to_owned();
