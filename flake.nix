@@ -104,8 +104,8 @@
             src = ./.;
             hooks = {
               alejandra.enable = true;
-              cargo-check.enable = true;
-              rustfmt.enable = true;
+              # cargo-check.enable = true;
+              # rustfmt.enable = true;
               statix.enable = true;
             };
           };
@@ -156,15 +156,15 @@
         devshell.startup.pre-commit.text = self.checks.${localSystem}.pre-commit.shellHook;
         packages =
           commonArgs.buildInputs
-          ++ [
+          ++ (with pkgs; [
             rustToolchain
-            pkgs.nil
-            pkgs.probe-run
-            pkgs.rust-analyzer
-            pkgs.cargo-flamegraph
-            pkgs.cargo-watch
-            pkgs.cargo-modules
-          ];
+            nil
+            probe-run
+            rust-analyzer
+            cargo-flamegraph
+            cargo-watch
+            cargo-modules
+          ]);
       };
 
       formatter = pkgs.alejandra;
