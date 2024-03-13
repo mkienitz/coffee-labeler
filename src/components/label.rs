@@ -11,6 +11,7 @@ fn editable_div(content: &str, id: &str) -> Markup {
 }
 
 pub fn label(bean_info: &BeanInfo) -> Markup {
+    let bean_info = bean_info.sanitised();
     html! {
         script src="https://cdn.tailwindcss.com" {}
         div #label

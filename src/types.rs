@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct BeanInfo {
     pub country: String,
     pub name: String,
@@ -30,5 +30,31 @@ impl Default for BeanInfo {
             processing: "washed".to_string(),
             aromatics: "lemongrass, raspberry, black tea".to_string(),
         }
+    }
+}
+
+impl BeanInfo {
+    fn sanitise(&self, pattern: &str) -> Self {
+        BeanInfo {
+            country: self.country.replace(pattern, ""),
+            name: self.name.replace(pattern, ""),
+            roaster: self.roaster.replace(pattern, ""),
+            varietals: self.varietals.replace(pattern, ""),
+            region: self.region.replace(pattern, ""),
+            farm: self.farm.replace(pattern, ""),
+            elevation: self.elevation.replace(pattern, ""),
+            dose_weight: self.dose_weight.replace(pattern, ""),
+            roasting_date: self.roasting_date.replace(pattern, ""),
+            processing: self.processing.replace(pattern, ""),
+            aromatics: self.aromatics.replace(pattern, ""),
+        }
+    }
+
+    pub fn sanitised(&self) -> Self {
+        println!("Sanitising...\n{:?}", self);
+        self.sanitise("&nbsp;")
+            .sanitise("<br>")
+            .sanitise("<div>")
+            .sanitise("</div>")
     }
 }
