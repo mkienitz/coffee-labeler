@@ -30,8 +30,10 @@ pub fn label_form(bean_info: &BeanInfo) -> Markup {
             {
                 div .flex .flex-col .grow {
                     label for="bq_url" { "Beanconquerer Share Link"}
-                    input
-                      #bq_url name="url" value="https://beanconqueror.com?shareUserBean0=ChVNdXN0YWbDoSBFc3RhdGUgRGVjYWYSABoYMjAyNC0wMS0zMVQyMzowMDowMC4wMDBaIgAqBEFNT0MyADgAQABIAFIAWhZzd2VldCwgdmFuaWxsYSwgdG9mZmVlYEhoAHADggEAiAEBkgEsaHR0cHM6Ly9hbWF0dGVyb2Zjb25jcmV0ZS5jb20vcHJvZHVjdC9kZWNhZi+aAQCgAQCqAVYKCENvbG9tYmlhEglSaXNhcmFsZGEaD011c3RhZsOhIEVzdGF0ZSIAKgZ+MTYwMG0yBDIwMjM6CENhc3RpbGxvQhJFQSBzdWdhcmNhbmUgZGVjYWZKALABAroBFggAEAAaACAAKAAwADoAQABIAFAAWADCAQDIAQDQAQDaARYIABAAGAAgACgAMAA4&shareUserBean1=AEAASABQAFgA4gECCgA="
+                    input #bq_url
+                      name="url"
+                      onfocus="this.value=''"
+                      value="https://beanconqueror.com?shareUserBean0=ChVNdXN0YWbDoSBFc3RhdGUgRGVjYWYSABoYMjAyNC0wMS0zMVQyMzowMDowMC4wMDBaIgAqBEFNT0MyADgAQABIAFIAWhZzd2VldCwgdmFuaWxsYSwgdG9mZmVlYEhoAHADggEAiAEBkgEsaHR0cHM6Ly9hbWF0dGVyb2Zjb25jcmV0ZS5jb20vcHJvZHVjdC9kZWNhZi+aAQCgAQCqAVYKCENvbG9tYmlhEglSaXNhcmFsZGEaD011c3RhZsOhIEVzdGF0ZSIAKgZ+MTYwMG0yBDIwMjM6CENhc3RpbGxvQhJFQSBzdWdhcmNhbmUgZGVjYWZKALABAroBFggAEAAaACAAKAAwADoAQABIAFAAWADCAQDIAQDQAQDaARYIABAAGAAgACgAMAA4&shareUserBean1=AEAASABQAFgA4gECCgA="
                       .bg-gray-700
                     ;
                 }
