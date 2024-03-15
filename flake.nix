@@ -61,17 +61,13 @@
           src = ./.;
           filter = path: type: (craneLib.filterCargoSources path type) || (lib.hasSuffix ".proto" (builtins.baseNameOf path));
         };
-        buildInputs =
-          (lib.optionals pkgs.stdenv.isDarwin [
-            # Additional darwin specific inputs can be set here
-            pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
-            pkgs.darwin.apple_sdk.frameworks.CoreFoundation
-            pkgs.darwin.apple_sdk.frameworks.Security
-            pkgs.libiconv
-          ])
-          ++ (lib.optionals (!pkgs.stdenv.isDarwin) [
-            pkgs.chromium
-          ]);
+        buildInputs = lib.optionals pkgs.stdenv.isDarwin [
+          # Additional darwin specific inputs can be set here
+          pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
+          pkgs.darwin.apple_sdk.frameworks.CoreFoundation
+          pkgs.darwin.apple_sdk.frameworks.Security
+          pkgs.libiconv
+        ];
       };
 
       # Build *just* the cargo dependencies, so we can reuse
@@ -82,6 +78,11 @@
       package = craneLib.buildPackage (commonArgs
         // {
           inherit cargoArtifacts;
+          nativeBuildInputs = [pkgs.makeWrapper];
+          postInstall = ''
+            wrapProgram $out/bin/coffee-labeler \
+              --prefix PATH : ${lib.makeBinPath [pkgs.chromium]}
+          '';
         });
     in {
       checks =
