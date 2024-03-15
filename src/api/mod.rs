@@ -53,7 +53,7 @@ pub async fn print_label(
     }
     .compile()?;
     let mut stream = TcpStream::connect(state.printer_address.clone()).await?;
-    let _bytes_written = stream.write(&print_job).await?;
+    stream.write_all(&print_job).await?;
     Ok(components::label(&print_info.bean_info))
 }
 
