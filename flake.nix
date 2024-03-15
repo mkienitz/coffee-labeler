@@ -61,13 +61,17 @@
           src = ./.;
           filter = path: type: (craneLib.filterCargoSources path type) || (lib.hasSuffix ".proto" (builtins.baseNameOf path));
         };
-        buildInputs = lib.optionals pkgs.stdenv.isDarwin [
-          # Additional darwin specific inputs can be set here
-          pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
-          pkgs.darwin.apple_sdk.frameworks.CoreFoundation
-          pkgs.darwin.apple_sdk.frameworks.Security
-          pkgs.libiconv
-        ];
+        buildInputs =
+          (lib.optionals pkgs.stdenv.isDarwin [
+            # Additional darwin specific inputs can be set here
+            pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
+            pkgs.darwin.apple_sdk.frameworks.CoreFoundation
+            pkgs.darwin.apple_sdk.frameworks.Security
+            pkgs.libiconv
+          ])
+          ++ (lib.optionals (!pkgs.stdenv.isDarwin) [
+            pkgs.chromium
+          ]);
       };
 
       # Build *just* the cargo dependencies, so we can reuse
