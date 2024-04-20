@@ -24,6 +24,7 @@ pub fn label_form(bean_info: &BeanInfo) -> Markup {
             form
               hx-post="/api/load_from_bq"
               hx-target="#label"
+              hx-swap="outerHTML"
               hx-include="[name='dose_weight']"
               _="on htmx:afterOnLoad remove @hidden from #print_button then add @hidden to #validate_button"
               .flex .flex-row .space-x-4 .items-end .border .border-gray-600 .p-3 .w-full .justify-center
