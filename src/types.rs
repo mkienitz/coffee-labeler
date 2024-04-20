@@ -51,7 +51,6 @@ impl BeanInfo {
     }
 
     pub fn sanitised(&self) -> Self {
-        println!("Sanitising...\n{:?}", self);
         self.sanitise("&nbsp;")
             .sanitise("<br>")
             .sanitise("<div>")
