@@ -18,6 +18,7 @@ pub fn label(bean_info: &BeanInfo) -> Markup {
           .flex .flex-col .justify-between ."w-[696px]" ."h-[401px]" ."text-3xl"
           .text-black .bg-white .border .border-black
           style="font-family: \"Roboto\";"
+          _="on input add @hidden to #print_button then remove @hidden from #validate_button"
         {
             div .flex .flex-row .max-w-full .border-b-4 .border-black {
                 div .leading-none .flex .items-center .justify-between .bg-red-600 .text-white .font-bold ."text-[56px]" .border-r .border-black {

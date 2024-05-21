@@ -67,15 +67,14 @@ pub fn label_form(bean_info: &BeanInfo) -> Markup {
                       hx-vals={"js:{bean_info:"(label_htmx_vals)", no_pages: Number(htmx.find('#no_pages').value)}"}
                       hx-confirm="Do you really want to print?"
                       .w-fit .h-fit .text-md .border .bg-gray-600 .border-gray-300 .p-1
-                      _="on input from #label add @hidden"
                     { "Print" }
                     button hidden
                       #validate_button
                       hx-post="/api/update_label"
+                      hx-swap="outerHTML"
                       hx-ext="json-enc" hx-target="#label" hx-vals={"js:"(label_htmx_vals)}
                       .w-fit .h-fit .text-md .border .bg-gray-600 .border-gray-300 .p-1
-                      _="on input from #label remove @hidden
-                         on htmx:afterOnLoad remove @hidden from #print_button then add @hidden"
+                      _="on htmx:afterOnLoad remove @hidden from #print_button then add @hidden"
                     { "Validate" }
                 }
             }
