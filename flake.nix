@@ -1,177 +1,120 @@
 {
-  description = "Coffee labeler";
-  inputs = {
-    crane = {
-      url = "github:ipetkov/crane";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+  description = "Coffee Labeler";
 
+  inputs = {
     devshell = {
       url = "github:numtide/devshell";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-
-    flake-utils.url = "github:numtide/flake-utils";
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    nci = {
+      url = "github:yusdacra/nix-cargo-integration";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     pre-commit-hooks = {
       url = "github:cachix/pre-commit-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
-      inputs.flake-utils.follows = "flake-utils";
     };
-
-    rust-overlay = {
-      url = "github:oxalica/rust-overlay";
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
-      inputs.flake-utils.follows = "flake-utils";
     };
   };
 
-  outputs = {
-    self,
-    devshell,
-    crane,
-    flake-utils,
-    nixpkgs,
-    pre-commit-hooks,
-    rust-overlay,
-  } @ inputs:
-    {
-      nixosModules.coffee-labeler = import ./nix/module.nix inputs;
-      nixosModules.default = self.nixosModules.coffee-labeler;
-      overlays.default = _final: prev: {
-        inherit (self.packages.${prev.stdenv.hostPlatform.system}) coffee-labeler;
-      };
-    }
-    // flake-utils.lib.eachDefaultSystem (localSystem: let
-      pkgs = import nixpkgs {
-        inherit localSystem;
-        overlays = [
-          devshell.overlays.default
-          rust-overlay.overlays.default
-        ];
-      };
-      inherit (pkgs) lib;
+  outputs =
+    inputs@{ flake-parts, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "aarch64-darwin"
+        "x86_64-darwin"
+      ];
 
-      rustToolchain = pkgs.pkgsBuildHost.rust-bin.stable.latest.default;
-      craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
+      imports = [
+        inputs.devshell.flakeModule
+        inputs.flake-parts.flakeModules.easyOverlay
+        inputs.nci.flakeModule
+        inputs.pre-commit-hooks.flakeModule
+        inputs.treefmt-nix.flakeModule
+      ];
 
-      commonArgs = {
-        src = lib.cleanSourceWith {
-          src = ./.;
-          filter = path: type: (craneLib.filterCargoSources path type) || (lib.hasSuffix ".proto" (builtins.baseNameOf path));
-        };
-        buildInputs = lib.optionals pkgs.stdenv.isDarwin [
-          # Additional darwin specific inputs can be set here
-          pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
-          pkgs.darwin.apple_sdk.frameworks.CoreFoundation
-          pkgs.darwin.apple_sdk.frameworks.Security
-          pkgs.libiconv
-        ];
-      };
-
-      # Build *just* the cargo dependencies, so we can reuse
-      # all of that work (e.g. via cachix) when running in CI
-      cargoArtifacts = craneLib.buildDepsOnly commonArgs;
-
-      # Build the actual package
-      package = craneLib.buildPackage (commonArgs
-        // {
-          inherit cargoArtifacts;
-          nativeBuildInputs = [pkgs.makeWrapper];
-          postInstall = ''
-            wrapProgram $out/bin/coffee-labeler \
-              --prefix PATH : ${lib.makeBinPath [pkgs.chromium]}
-          '';
-        });
-    in {
-      checks =
+      flake =
+        { config, ... }:
         {
-          coffee-labeler = package;
+          nixosModules.coffee-labeler = import ./nix/module.nix inputs;
+          nixosModules.default = config.nixosModules.coffee-labeler;
+        };
 
-          coffee-labeler-clippy = craneLib.cargoClippy (commonArgs
-            // {
-              inherit cargoArtifacts;
-              cargoClippyExtraArgs = "--all-targets -- --deny warnings";
-            });
-
-          coffee-labeler-doc = craneLib.cargoDoc (commonArgs
-            // {
-              inherit cargoArtifacts;
-            });
-
-          coffee-labeler-fmt = craneLib.cargoFmt {
-            inherit (commonArgs) src;
+      perSystem =
+        {
+          pkgs,
+          config,
+          lib,
+          ...
+        }:
+        let
+          crateName = "coffee-labeler";
+          projectName = crateName;
+          crateOutput = config.nci.outputs.${crateName};
+        in
+        {
+          nci = {
+            projects.${projectName} = {
+              path = ./.;
+              numtideDevshell = "default";
+            };
+            crates.${crateName}.drvConfig.mkDerivation = {
+              nativeBuildInputs = [ pkgs.makeWrapper ];
+              postInstall = ''
+                wrapProgram $out/bin/coffee-labeler \
+                  --prefix PATH : ${lib.makeBinPath (lib.optionals pkgs.stdenv.isLinux [ pkgs.chromium ])}
+              '';
+            };
           };
-        }
-        // {
-          pre-commit = pre-commit-hooks.lib.${localSystem}.run {
-            src = ./.;
-            hooks = {
-              alejandra.enable = true;
-              # cargo-check.enable = true;
-              # rustfmt.enable = true;
+
+          packages.default = crateOutput.packages.release;
+          overlayAttrs.coffee-labeler = config.packages.default;
+
+          devshells.default = {
+            packages = [
+              pkgs.nil
+              pkgs.rust-analyzer
+              pkgs.cargo-watch
+            ];
+            devshell.startup.pre-commit.text = config.pre-commit.installationScript;
+            env = [
+              {
+                name = "COFFEE_LABELER_ADDRESS";
+                value = "localhost";
+              }
+              {
+                name = "COFFEE_LABELER_PORT";
+                value = 3333;
+              }
+              {
+                name = "COFFEE_LABELER_PRINTER_ADDRESS";
+                value = "192.168.178.39";
+              }
+              {
+                name = "COFFEE_LABELER_PRINTER_PORT";
+                value = 9100;
+              }
+            ];
+          };
+
+          pre-commit.settings.hooks.treefmt.enable = true;
+
+          treefmt = {
+            projectRootFile = "flake.nix";
+            programs = {
+              deadnix.enable = true;
               statix.enable = true;
+              nixfmt.enable = true;
+              rustfmt.enable = true;
             };
           };
         };
-
-      packages.default = package;
-      packages.coffee-labeler = package;
-
-      devShells.default = pkgs.devshell.mkShell {
-        name = "coffee-labeler";
-        imports = [
-          "${devshell}/extra/language/rust.nix"
-        ];
-        language.rust.enableDefaultToolchain = false;
-
-        commands = [
-          {
-            package = pkgs.alejandra;
-            help = "Format nix code";
-          }
-          {
-            package = pkgs.statix;
-            help = "Lint nix code";
-          }
-          {
-            package = pkgs.deadnix;
-            help = "Find unused expressions in nix code";
-          }
-        ];
-        env = [
-          {
-            name = "COFFEE_LABELER_ADDRESS";
-            value = "localhost";
-          }
-          {
-            name = "COFFEE_LABELER_PORT";
-            value = 3333;
-          }
-          {
-            name = "COFFEE_LABELER_PRINTER_ADDRESS";
-            value = "192.168.178.36";
-          }
-          {
-            name = "COFFEE_LABELER_PRINTER_PORT";
-            value = 9100;
-          }
-        ];
-        devshell.startup.pre-commit.text = self.checks.${localSystem}.pre-commit.shellHook;
-        packages =
-          commonArgs.buildInputs
-          ++ (with pkgs; [
-            rustToolchain
-            nil
-            probe-run
-            rust-analyzer
-            cargo-flamegraph
-            cargo-watch
-            cargo-modules
-          ]);
-      };
-
-      formatter = pkgs.alejandra;
-    });
+    };
 }
